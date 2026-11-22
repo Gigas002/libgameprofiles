@@ -80,8 +80,9 @@ An `slr` profile has two independent choices:
 - **The libraries** (`mode`): `container` (the default) runs the game in the
   runtime's container, with the runtime's libraries only (plus your graphics
   drivers). `overlay` runs it on your system without a container, with the
-  runtime's libraries found first; your C library and graphics drivers always
-  stay, and `lib_overrides` picks the copy for other libraries. In overlay
+  runtime's libraries added where yours are missing or older; your C library
+  and graphics drivers always stay, and `lib_overrides` picks the copy for
+  other libraries. In overlay
   mode, a `prefix` only redirects `HOME` and `XDG_*`, so it is leakier.
 
 A commented example for each runner is in
