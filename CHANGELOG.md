@@ -4,10 +4,6 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-### Added
-
-- Example profiles for every runner (`examples/profiles`), checked by a test.
-
 ## [0.1.0]
 
 - Initial release: the profile model, validation and store of lootrs
@@ -17,3 +13,6 @@ All notable changes to this project will be documented in this file.
   written through symlinks with permissions kept; NUL characters, bad `env`
   keys and a `prefix` holding the home directory are errors; settings for
   another runner and unknown keys are warnings.
+- `slr` is a runner of its own, which `[slr]` belongs to and requires, with
+  `mode = "container" | "overlay"` and `[slr.lib_overrides]` for overlay mode.
+- Example profiles for every runner (`examples/profiles`), checked by a test.

@@ -16,7 +16,7 @@ fn example_profiles_are_clean() {
             .iter()
             .map(|p| p.name.as_str())
             .collect::<Vec<_>>(),
-        ["native", "proton", "slr", "umu", "wine"]
+        ["native", "proton", "slr", "slr-overlay", "umu", "wine"]
     );
     for profile in &loaded.profiles {
         let issues: Vec<String> = profile

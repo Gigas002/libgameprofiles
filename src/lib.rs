@@ -1,7 +1,7 @@
 //! Game profiles shared by [lootrs], [gaki] and [sruman].
 //!
 //! A profile is a `profiles/<name>.toml` file that says how games run: which
-//! runner (`wine`, `umu`, `proton` or `native`), in which prefix, with which
+//! runner (`wine`, `umu`, `proton`, `native` or `slr`), in which prefix, with which
 //! environment, wrappers and runner-specific settings. One schema serves all
 //! three tools, so one profile directory can be shared between them.
 //!
@@ -27,12 +27,12 @@
 //! assert!(unknown.is_empty());
 //! assert_eq!(profile.runner, Runner::Native);
 //!
-//! // A plain `native` profile has no prefix: that's a warning.
+//! // A `native` game runs as is, without a prefix: that's a warning.
 //! let issues = profile.validate(Path::new("/home/user"));
 //! assert_eq!(issues[0].severity, Severity::Warning);
 //! assert_eq!(
 //!     issues[0].to_string(),
-//!     "warning: profile `native`: `prefix` is ignored for runner `native` without `[slr]`"
+//!     "warning: profile `native`: `prefix` is ignored for runner `native`"
 //! );
 //! # Ok::<(), toml::de::Error>(())
 //! ```
@@ -49,8 +49,8 @@ pub mod store;
 
 pub use issue::{Issue, Issues, Severity, Subject};
 pub use profile::{
-    Anticheat, ParseRunnerError, Profile, ProtonSection, Runner, ShaderCache, SlrSection,
-    SteamIntegration, UmuSection, WineSection,
+    Anticheat, LibOverride, ParseRunnerError, Profile, ProtonSection, Runner, ShaderCache, SlrMode,
+    SlrSection, SteamIntegration, UmuSection, WineSection,
 };
 
 #[cfg(test)]

@@ -1,0 +1,14 @@
+# profiles/slr-overlay.toml: a Linux game on the host, with a Steam Linux
+# Runtime's libraries found first (sruman). No container: the game sees your
+# real home and system. Your C library and graphics drivers always stay.
+
+name = "slr-overlay"
+runner = "slr"
+# No prefix: in overlay mode it would only redirect HOME and XDG_* variables.
+
+[slr]
+runtime = "scout"
+mode = "overlay"
+
+[slr.lib_overrides]                     # which copy of a library wins
+"libSDL2-2.0.so.0" = "host"             # runtime | host | newest

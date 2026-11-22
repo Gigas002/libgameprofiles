@@ -37,13 +37,20 @@ fn slr() -> Profile {
         prefix: Some("/pfx/native".into()),
         runner_args: vec!["--verbose".into()],
         slr: Some(SlrSection::new("sniper")),
-        ..Profile::new("sniper", Runner::Native)
+        ..Profile::new("sniper", Runner::Slr)
     }
+}
+
+fn overlay() -> Profile {
+    let mut profile = slr();
+    profile.prefix = None;
+    profile.slr.as_mut().unwrap().mode = SlrMode::Overlay;
+    profile
 }
 
 #[test]
 fn minimal_profiles_are_valid() {
-    for runner in Runner::ALL {
+    for runner in Runner::ALL.into_iter().filter(|&r| r != Runner::Slr) {
         assert_eq!(
             Profile::new("p", runner).validate(home()),
             Vec::new(),
@@ -52,6 +59,7 @@ fn minimal_profiles_are_valid() {
     }
     assert_eq!(wine().validate(home()), Vec::new());
     assert_eq!(slr().validate(home()), Vec::new());
+    assert_eq!(overlay().validate(home()), Vec::new());
 }
 
 #[test]
@@ -62,9 +70,23 @@ fn runner_names() {
     }
     assert_eq!(
         "Wine".parse::<Runner>().unwrap_err().to_string(),
-        "unknown runner `Wine`; use `wine`, `umu`, `proton` or `native`"
+        "unknown runner `Wine`; use `wine`, `umu`, `proton`, `native` or `slr`"
     );
     assert!(Runner::Proton.is_windows() && !Runner::Native.is_windows());
+    assert!(!Runner::Slr.is_windows());
+    for (mode, text) in [
+        (SlrMode::Container, "container"),
+        (SlrMode::Overlay, "overlay"),
+    ] {
+        assert_eq!(mode.to_string(), text);
+    }
+    for (value, text) in [
+        (LibOverride::Runtime, "runtime"),
+        (LibOverride::Host, "host"),
+        (LibOverride::Newest, "newest"),
+    ] {
+        assert_eq!(value.to_string(), text);
+    }
     for steam in [
         SteamIntegration::Auto,
         SteamIntegration::Host,
@@ -118,8 +140,14 @@ battleye = true
 
 [slr]
 runtime = "sniper=3.0.1"
+mode = "overlay"
 filesystems_rw = ["/mnt/games"]
 filesystems_ro = ["/opt/data"]
+
+[slr.lib_overrides]
+"libSDL2-2.0.so.0" = "host"
+"libstdc++.so.6" = "newest"
+"libfoo.so" = "runtime"
 "#;
     let profile: Profile = toml::from_str(text).unwrap();
     assert_eq!(profile.steam, Some(SteamIntegration::Host));
@@ -130,7 +158,10 @@ filesystems_ro = ["/opt/data"]
             eac: false
         }
     );
-    assert_eq!(profile.slr.as_ref().unwrap().runtime, "sniper=3.0.1");
+    let slr = profile.slr.as_ref().unwrap();
+    assert_eq!(slr.runtime, "sniper=3.0.1");
+    assert_eq!(slr.mode, SlrMode::Overlay);
+    assert_eq!(slr.lib_overrides["libSDL2-2.0.so.0"], LibOverride::Host);
     let back: Profile = toml::from_str(&toml::to_string_pretty(&profile).unwrap()).unwrap();
     assert_eq!(back, profile);
 }
@@ -139,13 +170,28 @@ filesystems_ro = ["/opt/data"]
 fn defaults_are_not_written() {
     let text = toml::to_string_pretty(&Profile::new("p", Runner::Native)).unwrap();
     assert_eq!(text, "name = \"p\"\nrunner = \"native\"\n");
+    // `mode = "container"` is the default, so it isn't written either.
+    let text = toml::to_string_pretty(&slr()).unwrap();
+    assert!(
+        text.contains("runtime = \"sniper\"") && !text.contains("mode"),
+        "{text}"
+    );
 }
 
 #[test]
 fn runner_is_required_and_lowercase() {
     assert!(toml::from_str::<Profile>("name = \"p\"").is_err());
     assert!(toml::from_str::<Profile>("name = \"p\"\nrunner = \"Wine\"").is_err());
-    assert!(toml::from_str::<Profile>("name = \"p\"\nrunner = \"native\"\n[slr]").is_err());
+    assert!(toml::from_str::<Profile>("name = \"p\"\nrunner = \"slr\"\n[slr]").is_err());
+    // Modes and override values are lowercase words.
+    for bad in [
+        "mode = \"Overlay\"",
+        "mode = \"chroot\"",
+        "lib_overrides = { \"libx.so\" = \"system\" }",
+    ] {
+        let text = format!("name = \"p\"\nrunner = \"slr\"\n[slr]\nruntime = \"s\"\n{bad}\n");
+        assert!(toml::from_str::<Profile>(&text).is_err(), "{bad}");
+    }
 }
 
 #[test]
@@ -211,7 +257,7 @@ fn prefix_must_not_hold_the_home() {
 }
 
 #[test]
-fn native_uses_prefix_and_runner_args_only_with_slr() {
+fn native_has_no_prefix_or_runner_args() {
     let profile = Profile {
         prefix: Some("/pfx".into()),
         runner_args: vec!["-x".into()],
@@ -222,8 +268,8 @@ fn native_uses_prefix_and_runner_args_only_with_slr() {
     assert_eq!(
         warnings(&profile.validate(home())),
         [
-            "`prefix` is ignored for runner `native` without `[slr]`",
-            "`runner_args` is ignored for runner `native` without `[slr]`",
+            "`prefix` is ignored for runner `native`",
+            "`runner_args` is ignored for runner `native`",
         ]
     );
     assert!(slr().uses_prefix());
@@ -497,4 +543,99 @@ fn shader_cache_env_follows_protons_layout() {
     ShaderCache::create_dirs(&tmp.path().join("g"), Runner::Umu).unwrap();
     assert!(tmp.path().join("g/DXVK_state_cache").is_dir());
     assert!(tmp.path().join("g/AMDv1").is_dir());
+}
+
+#[test]
+fn slr_section_belongs_to_the_slr_runner() {
+    assert_eq!(
+        errors(&Profile::new("p", Runner::Slr).validate(home())),
+        ["`[slr]` is required for runner `slr`: it names the runtime"]
+    );
+    // `[slr]` on `native` (the old way to write an slr profile) is kept but
+    // ignored, and so are `prefix` and `runner_args`.
+    let old = Profile {
+        runner: Runner::Native,
+        ..slr()
+    };
+    assert_eq!(
+        warnings(&old.validate(home())),
+        [
+            "`prefix` is ignored for runner `native`",
+            "`runner_args` is ignored for runner `native`",
+            "`[slr]` is ignored for runner `native`",
+        ]
+    );
+}
+
+#[test]
+fn each_mode_warns_about_what_it_ignores() {
+    // Container mode: overrides are ignored (and not judged); shared paths
+    // are checked.
+    let mut container = slr();
+    let section = container.slr.as_mut().unwrap();
+    section.lib_overrides = BTreeMap::from([("not a lib".into(), LibOverride::Host)]);
+    section.filesystems_rw = vec!["games".into()];
+    let issues = container.validate(home());
+    assert_eq!(
+        errors(&issues),
+        ["`slr.filesystems_rw` must be an absolute path (or start with `~`), got `games`"]
+    );
+    assert_eq!(
+        warnings(&issues),
+        [
+            "`slr.lib_overrides` is ignored in `container` mode: the container has the runtime's \
+          libraries only"
+        ]
+    );
+
+    // Overlay mode: shared paths are ignored (and not judged), a prefix only
+    // redirects the home, overrides are checked.
+    let mut profile = overlay();
+    profile.prefix = Some("~/pfx".into());
+    let section = profile.slr.as_mut().unwrap();
+    section.filesystems_rw = vec!["games".into()];
+    section.filesystems_ro = vec!["/data".into()];
+    section.lib_overrides = BTreeMap::from([
+        ("libSDL2-2.0.so.0".into(), LibOverride::Host),
+        ("libSDL2".into(), LibOverride::Host),
+    ]);
+    let issues = profile.validate(home());
+    assert_eq!(
+        errors(&issues),
+        ["`slr.lib_overrides` key `libSDL2` is not a library file name (like `libSDL2-2.0.so.0`)"]
+    );
+    assert_eq!(
+        warnings(&issues),
+        [
+            "`slr.filesystems_rw` is ignored in `overlay` mode: there's no container, so the \
+             game sees every path",
+            "`slr.filesystems_ro` is ignored in `overlay` mode: there's no container, so the \
+             game sees every path",
+            "in `overlay` mode, `prefix` only redirects `HOME` and `XDG_*`: a game that finds \
+             its home another way still reaches the real one",
+        ]
+    );
+}
+
+#[test]
+fn library_names() {
+    for ok in [
+        "libSDL2-2.0.so.0",
+        "libstdc++.so.6",
+        "libfoo.so",
+        "ld-linux-x86-64.so.2",
+    ] {
+        assert_eq!(validate_lib_name(ok), Ok(()), "{ok}");
+    }
+    for bad in [
+        "",
+        "libfoo",
+        "lib/foo.so",
+        "/usr/lib/libfoo.so",
+        "libfoo.sop",
+        "a b.so",
+        "x\0.so",
+    ] {
+        assert!(validate_lib_name(bad).is_err(), "{bad:?}");
+    }
 }

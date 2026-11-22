@@ -4,19 +4,20 @@
 //! to the selected runner are kept (so switching `runner` back and forth never
 //! loses data) but get a warning from [`Profile::validate`].
 //!
-//! | Setting                                       | `wine` | `umu` | `proton` | `native` |
-//! | --------------------------------------------- | :----: | :---: | :------: | :------: |
-//! | `wrappers`, `debug`, `env`, `shader_cache`    |   ✓    |   ✓   |    ✓     |    ✓     |
-//! | `prefix`, `runner_args`                       |   ✓    |   ✓   |    ✓     | `[slr]`  |
-//! | `dll_overrides`, `[anticheat]`                |   ✓    |   ✓   |    ✓     |          |
-//! | `dxvk`, `vkd3d`, `[wine]`                     |   ✓    |       |          |          |
-//! | `[umu]`                                       |        |   ✓   |          |          |
-//! | `[proton]`, `steam`                           |        |       |    ✓     |          |
-//! | `[slr]`                                       |        |       |          |    ✓     |
+//! | Setting                                       | `wine` | `umu` | `proton` | `native` | `slr` |
+//! | --------------------------------------------- | :----: | :---: | :------: | :------: | :---: |
+//! | `wrappers`, `debug`, `env`, `shader_cache`    |   ✓    |   ✓   |    ✓     |    ✓     |   ✓   |
+//! | `prefix`, `runner_args`                       |   ✓    |   ✓   |    ✓     |          |   ✓   |
+//! | `dll_overrides`, `[anticheat]`                |   ✓    |   ✓   |    ✓     |          |       |
+//! | `dxvk`, `vkd3d`, `[wine]`                     |   ✓    |       |          |          |       |
+//! | `[umu]`                                       |        |   ✓   |          |          |       |
+//! | `[proton]`, `steam`                           |        |       |    ✓     |          |       |
+//! | `[slr]` (required)                            |        |       |          |          |   ✓   |
 //!
-//! A `native` profile with `[slr]` runs its games in a Steam Linux Runtime
-//! container (sruman), where `prefix` is the game's private home and
-//! `runner_args` go to the container's entry point.
+//! An `slr` profile runs Linux games with a Steam Linux Runtime (sruman).
+//! `prefix` gives the game a private home (`<prefix>/home`), and
+//! [`SlrSection::mode`] says where its libraries come from: the runtime's
+//! container, or the host with the runtime's libraries on top.
 //!
 //! [`Profile::validate`] checks the file itself: names, paths, the values a
 //! process can be started with, and settings the runner ignores. What a tool
@@ -44,12 +45,12 @@ pub struct Profile {
     pub name: String,
     pub runner: Runner,
     /// The Wine prefix for `wine` and `umu`; `STEAM_COMPAT_DATA_PATH` for
-    /// `proton`; the game's private home (`<prefix>/home`) for `native` with
-    /// `[slr]`. Several profiles may share one.
+    /// `proton`; the game's private home (`<prefix>/home`) for `slr`. Several
+    /// profiles may share one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prefix: Option<PathBuf>,
-    /// Inserted between the runner and the executable (for `native` with
-    /// `[slr]`: options of the runtime's entry point).
+    /// Inserted between the runner and the executable (for `slr`: options of
+    /// the runtime's entry point).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub runner_args: Vec<String>,
     /// Prepended to the whole command, e.g. `["mangohud"]`, like Steam's
@@ -87,7 +88,7 @@ pub struct Profile {
     /// and the client.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub shader_cache: Option<ShaderCache>,
-    /// `native` only: run in a Steam Linux Runtime.
+    /// `slr` only, and required there: the Steam Linux Runtime.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub slr: Option<SlrSection>,
 }
@@ -101,12 +102,14 @@ pub enum Runner {
     Umu,
     /// Steam's Proton (`proton run`), as Steam launches it.
     Proton,
-    /// The executable as is (or in a Steam Linux Runtime, with `[slr]`).
+    /// A Linux executable as is.
     Native,
+    /// A Linux executable with a Steam Linux Runtime (`[slr]`, sruman).
+    Slr,
 }
 
 impl Runner {
-    pub const ALL: [Self; 4] = [Self::Wine, Self::Umu, Self::Proton, Self::Native];
+    pub const ALL: [Self; 5] = [Self::Wine, Self::Umu, Self::Proton, Self::Native, Self::Slr];
 
     #[must_use]
     pub fn as_str(self) -> &'static str {
@@ -115,13 +118,14 @@ impl Runner {
             Self::Umu => "umu",
             Self::Proton => "proton",
             Self::Native => "native",
+            Self::Slr => "slr",
         }
     }
 
     /// Whether the runner runs Windows executables (through Wine).
     #[must_use]
     pub fn is_windows(self) -> bool {
-        self != Self::Native
+        matches!(self, Self::Wine | Self::Umu | Self::Proton)
     }
 }
 
@@ -132,7 +136,7 @@ impl fmt::Display for Runner {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("unknown runner `{0}`; use `wine`, `umu`, `proton` or `native`")]
+#[error("unknown runner `{0}`; use `wine`, `umu`, `proton`, `native` or `slr`")]
 pub struct ParseRunnerError(pub String);
 
 impl FromStr for Runner {
@@ -238,28 +242,101 @@ impl Anticheat {
     }
 }
 
-/// `[slr]`: which Steam Linux Runtime a `native` profile runs in, and what its
-/// container sees.
+/// `[slr]`: which Steam Linux Runtime an `slr` profile uses, and how.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SlrSection {
     /// A runtime name (`sniper`), or `name=build` to pin a build. Its syntax
     /// and the known runtimes are the runtime manager's (sruman) to check.
     pub runtime: String,
-    /// Extra host paths shared read-write with the container.
+    /// Where the game's libraries come from.
+    #[serde(default, skip_serializing_if = "SlrMode::is_default")]
+    pub mode: SlrMode,
+    /// `container` mode: extra host paths shared read-write with the container.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub filesystems_rw: Vec<PathBuf>,
-    /// Extra host paths shared read-only.
+    /// `container` mode: extra host paths shared read-only.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub filesystems_ro: Vec<PathBuf>,
+    /// `overlay` mode: which copy of a library wins, by file name
+    /// (`libSDL2-2.0.so.0`), over the runtime manager's defaults.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub lib_overrides: BTreeMap<String, LibOverride>,
 }
 
 impl SlrSection {
     pub fn new(runtime: impl Into<String>) -> Self {
         Self {
             runtime: runtime.into(),
+            mode: SlrMode::default(),
             filesystems_rw: Vec::new(),
             filesystems_ro: Vec::new(),
+            lib_overrides: BTreeMap::new(),
         }
+    }
+}
+
+/// `slr.mode`: where an `slr` game's libraries come from.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SlrMode {
+    /// The runtime's own system in a container (pressure-vessel): the host's
+    /// libraries aren't used, except the graphics drivers.
+    #[default]
+    Container,
+    /// No container: the host system and home, with the runtime's libraries
+    /// found first (`LD_LIBRARY_PATH`). The host's C library and graphics
+    /// drivers always stay.
+    Overlay,
+}
+
+impl SlrMode {
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Container => "container",
+            Self::Overlay => "overlay",
+        }
+    }
+
+    #[must_use]
+    pub fn is_default(&self) -> bool {
+        *self == Self::default()
+    }
+}
+
+impl fmt::Display for SlrMode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+/// A `slr.lib_overrides` value: which copy of a library an `overlay` game
+/// loads.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum LibOverride {
+    /// The runtime's copy.
+    Runtime,
+    /// The host's copy.
+    Host,
+    /// Whichever copy is newer.
+    Newest,
+}
+
+impl LibOverride {
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Runtime => "runtime",
+            Self::Host => "host",
+            Self::Newest => "newest",
+        }
+    }
+}
+
+impl fmt::Display for LibOverride {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
     }
 }
 
@@ -364,10 +441,10 @@ impl Profile {
     }
 
     /// Whether `prefix` and `runner_args` mean something for this profile:
-    /// every Windows runner, and `native` in a Steam Linux Runtime.
+    /// every runner but `native`.
     #[must_use]
     pub fn uses_prefix(&self) -> bool {
-        self.runner.is_windows() || self.slr.is_some()
+        self.runner != Runner::Native
     }
 
     /// `prefix` with `~` expanded, when the runner uses one.
@@ -394,7 +471,7 @@ impl Profile {
 
         if let Some(prefix) = &self.prefix {
             if !self.uses_prefix() {
-                issues.warn(format!("{} without `[slr]`", ignored("prefix")));
+                issues.warn(ignored("prefix"));
             } else if let Some(prefix) = issues.absolute("prefix", prefix, home)
                 && home.starts_with(&prefix)
             {
@@ -405,7 +482,7 @@ impl Profile {
             }
         }
         if !self.runner_args.is_empty() && !self.uses_prefix() {
-            issues.warn(format!("{} without `[slr]`", ignored("runner_args")));
+            issues.warn(ignored("runner_args"));
         }
         issues.args("runner_args", &self.runner_args, true);
         issues.args("wrappers", &self.wrappers, false);
@@ -435,7 +512,7 @@ impl Profile {
                     "{}: Proton ships its own; use another Proton build instead",
                     ignored(field)
                 )),
-                Runner::Native => issues.warn(ignored(field)),
+                Runner::Native | Runner::Slr => issues.warn(ignored(field)),
             }
         }
 
@@ -503,10 +580,24 @@ impl Profile {
         }
 
         match (&self.slr, runner) {
-            (Some(slr), Runner::Native) => {
-                if slr.runtime.trim().is_empty() {
-                    issues.error("`slr.runtime` must not be empty");
-                }
+            (Some(slr), Runner::Slr) => self.check_slr(slr, home, issues),
+            (Some(_), _) => issues.warn(ignored("[slr]")),
+            (None, Runner::Slr) => {
+                issues.error("`[slr]` is required for runner `slr`: it names the runtime");
+            }
+            (None, _) => {}
+        }
+    }
+
+    /// `[slr]` of an `slr` profile, and the settings its mode ignores.
+    fn check_slr(&self, slr: &SlrSection, home: &Path, issues: &mut Issues) {
+        if slr.runtime.trim().is_empty() {
+            issues.error("`slr.runtime` must not be empty");
+        }
+        let mode = slr.mode;
+        let ignored = |field: &str| format!("`{field}` is ignored in `{mode}` mode");
+        match mode {
+            SlrMode::Container => {
                 for (field, paths) in [
                     ("slr.filesystems_rw", &slr.filesystems_rw),
                     ("slr.filesystems_ro", &slr.filesystems_ro),
@@ -515,11 +606,59 @@ impl Profile {
                         issues.absolute(field, path, home);
                     }
                 }
+                if !slr.lib_overrides.is_empty() {
+                    issues.warn(format!(
+                        "{}: the container has the runtime's libraries only",
+                        ignored("slr.lib_overrides")
+                    ));
+                }
             }
-            (Some(_), _) => issues.warn(ignored("[slr]")),
-            (None, _) => {}
+            SlrMode::Overlay => {
+                for (field, paths) in [
+                    ("slr.filesystems_rw", &slr.filesystems_rw),
+                    ("slr.filesystems_ro", &slr.filesystems_ro),
+                ] {
+                    if !paths.is_empty() {
+                        issues.warn(format!(
+                            "{}: there's no container, so the game sees every path",
+                            ignored(field)
+                        ));
+                    }
+                }
+                if self.prefix.is_some() {
+                    issues.warn(
+                        "in `overlay` mode, `prefix` only redirects `HOME` and `XDG_*`: a game \
+                         that finds its home another way still reaches the real one",
+                    );
+                }
+                for lib in slr.lib_overrides.keys() {
+                    if let Err(message) = validate_lib_name(lib) {
+                        issues.error(message);
+                    }
+                }
+            }
         }
     }
+}
+
+/// Checks a `slr.lib_overrides` key: a library file name such as
+/// `libSDL2-2.0.so.0`.
+///
+/// # Errors
+///
+/// What's wrong with the name, naming it.
+// Library file names are case-sensitive: the loader only finds `.so`.
+#[allow(clippy::case_sensitive_file_extension_comparisons)]
+pub fn validate_lib_name(lib: &str) -> Result<(), String> {
+    if lib.is_empty()
+        || lib.contains(['/', '\0', '=', ' '])
+        || !(lib.ends_with(".so") || lib.contains(".so."))
+    {
+        return Err(format!(
+            "`slr.lib_overrides` key `{lib}` is not a library file name (like `libSDL2-2.0.so.0`)"
+        ));
+    }
+    Ok(())
 }
 
 /// Checks one `dll_overrides` entry: a DLL name, and Wine's override modes

@@ -18,13 +18,13 @@ only side effects are file reads in `store::load*`, file writes in
 
 | Check                                                     | Result                                                 |
 | --------------------------------------------------------- | ------------------------------------------------------ |
-| `cargo test` (39 unit tests, 1 doctest)                   | pass                                                   |
+| `cargo test` (42 unit tests, 1 example test, 1 doctest)   | pass                                                   |
 | `cargo clippy --all-targets -- -D warnings`               | clean                                                  |
 | `cargo clippy --lib -- -D warnings -W clippy::pedantic`   | clean                                                  |
 | `RUSTDOCFLAGS="-D warnings" cargo doc --no-deps`          | clean                                                  |
 | `cargo deny check` (advisories, bans, licenses, sources)  | ok                                                     |
 | `typos`                                                   | clean                                                  |
-| `cargo llvm-cov`                                          | 97.4% lines, 98.8% functions, 96.5% regions            |
+| `cargo llvm-cov`                                          | 97.7% lines, 98.9% functions, 96.8% regions            |
 | `cargo package`                                           | builds from the packaged sources                       |
 
 Uncovered lines are I/O error branches that need a failing disk (a failed
@@ -83,6 +83,14 @@ Checked and fine:
   never picks one up.
 - **Round trip.** Every field survives `save` → `load`, and defaults aren't
   written (`every_field_round_trips`, `defaults_are_not_written`).
+- **`slr` settings** (added before release, reviewed the same way):
+  `slr.mode` and the `lib_overrides` values are closed lists, so a typo is a
+  parse error naming the line, never a silently different behaviour. A
+  `lib_overrides` key must be a bare library file name (`*.so` or `*.so.*`, no
+  `/`, space, `=` or NUL), so it can't name a path outside the runtime and
+  host library folders; which libraries may be overridden at all (never the
+  C library) is sruman's to enforce. Settings a mode ignores warn and aren't
+  checked, like those of another runner.
 
 ## API and semver notes
 
@@ -93,8 +101,10 @@ Checked and fine:
 - `Issue<S>` and `Issues<S>` are generic over the subject, so each tool keeps
   its own subjects (gaki's games have an app id) and converts the library's
   with `Issue::map_subject` and `From`.
-- `runner` is required in every file, `[slr]` included. This keeps a file's
-  meaning independent of the tool that reads it.
+- `runner` is required in every file. This keeps a file's meaning
+  independent of the tool that reads it. `slr` is a runner of its own rather
+  than `native` plus `[slr]`, so no runner changes meaning with an optional
+  section, and each tool refuses the runners it can't launch.
 - The fit of the API was checked by porting all three consumers to it
   (lootrs, gaki and sruman on their `feature/libgameprofiles` branches). Their
   test suites pass in every feature set, and lootrs and gaki report
@@ -106,7 +116,7 @@ Compared with the code each tool had before:
 
 - **All:** findings 6 to 9 above.
 - **lootrs:** `native` games get no DXVK/VKD3D shader cache variables (only
-  Mesa, NVIDIA and AMD); profiles with `[slr]` are refused (sruman runs them).
-- **gaki:** profiles with `[slr]` are refused.
-- **sruman:** profile files need `runner = "native"`; a malformed
+  Mesa, NVIDIA and AMD); `slr` profiles are refused (sruman runs them).
+- **gaki:** `slr` profiles are refused.
+- **sruman:** profile files need `runner = "slr"`; a malformed
   `slr.runtime` is a validation error instead of a load error.

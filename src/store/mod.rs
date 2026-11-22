@@ -50,8 +50,10 @@ pub const KNOWN_KEYS: &[&str] = &[
     "shader_cache",
     "slr",
     "slr.runtime",
+    "slr.mode",
     "slr.filesystems_rw",
     "slr.filesystems_ro",
+    "slr.lib_overrides.*",
 ];
 
 #[derive(Debug, thiserror::Error)]

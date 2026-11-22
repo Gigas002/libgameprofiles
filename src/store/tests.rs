@@ -139,7 +139,7 @@ wine = { path = "/w" }
 umu = { umu_run = "/u", proton = "/p", game_id = "g", store = "s" }
 proton = { build = "b" }
 anticheat = { battleye = false, eac = false }
-slr = { runtime = "r", filesystems_rw = [], filesystems_ro = [] }
+slr = { runtime = "r", mode = "overlay", filesystems_rw = [], filesystems_ro = [], lib_overrides = {} }
 "#;
     let (_, issues) = parse(text, Subject::Profile("all".into())).unwrap();
     assert_eq!(issues, Vec::new());
@@ -149,7 +149,10 @@ slr = { runtime = "r", filesystems_rw = [], filesystems_ro = [] }
         match value {
             toml::Value::Table(inner) if !inner.is_empty() => {
                 keys.push(key.clone());
-                keys.extend(inner.keys().map(|k| format!("{key}.{k}")));
+                keys.extend(inner.iter().map(|(k, v)| match v {
+                    toml::Value::Table(_) => format!("{key}.{k}.*"),
+                    _ => format!("{key}.{k}"),
+                }));
             }
             toml::Value::Table(_) => keys.push(format!("{key}.*")),
             _ => keys.push(key.clone()),
