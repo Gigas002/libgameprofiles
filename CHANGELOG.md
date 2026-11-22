@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Example profiles for every runner (`examples/profiles`), checked by a test.
+
 ## [0.1.0]
 
 - Initial release: the profile model, validation and store of lootrs

@@ -1,0 +1,14 @@
+# profiles/proton.toml: a Steam game through Steam's own Proton (gaki).
+
+name = "proton"
+runner = "proton"
+prefix = "~/prefixes/proton"            # STEAM_COMPAT_DATA_PATH; the Wine prefix is its pfx/
+# runner_args = []                      # between `proton run` and the executable
+shader_cache = "off"
+
+[env]
+PROTON_ENABLE_WAYLAND = "1"
+
+[proton]
+build = "experimental"                  # a Steam build name, or a Proton directory
+# steam = "auto"                        # auto | host | none: bridge to the host Steam client

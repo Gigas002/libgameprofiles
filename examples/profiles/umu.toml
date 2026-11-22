@@ -1,0 +1,21 @@
+# profiles/umu.toml: a Windows game through Proton outside Steam (lootrs).
+# DXVK and VKD3D-Proton come with Proton, so there's no `dxvk`/`vkd3d` here.
+
+name = "umu"
+runner = "umu"
+prefix = "~/prefixes/umu"               # the Wine prefix (WINEPREFIX)
+wrappers = ["gamemoderun", "mangohud"]
+shader_cache = "~/.cache/shaders"
+
+[env]
+PROTON_ENABLE_WAYLAND = "1"
+PROTON_USE_WOW64 = "1"
+
+[umu]
+proton = "/usr/share/steam/compatibilitytools.d/proton-cachyos-native" # PROTONPATH
+# umu_run = "/usr/bin/umu-run"          # default: umu-run from PATH
+# game_id = "umu-default"               # GAMEID; a game's own wins
+# store = "gog"                         # STORE
+
+[anticheat]
+eac = true

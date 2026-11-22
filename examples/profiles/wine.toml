@@ -1,0 +1,25 @@
+# profiles/wine.toml: a Windows game through Wine (lootrs).
+# `name` must match the file name. Paths are absolute or start with `~`.
+
+name = "wine"
+runner = "wine"
+prefix = "~/prefixes/wine"              # the Wine prefix; created on first launch
+# runner_args = []                      # between `wine` and the executable
+wrappers = ["gamemoderun"]              # before the whole command
+# debug = false                         # verbose Wine logging
+shader_cache = "~/.cache/shaders"       # one folder per game, or "off"
+dxvk = "~/dxvk/dxvk-2.7"                # x64/ (and x32/) DLLs to install
+vkd3d = "~/dxvk/vkd3d-proton-2.14"      # x64/ (and x86/) DLLs to install
+
+[env]
+DXVK_HUD = "fps"
+
+[dll_overrides]                         # merged into WINEDLLOVERRIDES
+winhttp = "n,b"                         # n, b, n,b, b,n, or "" to disable
+
+[wine]
+path = "/opt/wine-tkg"                  # a wine binary or a build with bin/wine; default: wine from PATH
+
+# [anticheat]                           # Proton's anti-cheat runtimes
+# battleye = false
+# eac = false

@@ -68,6 +68,10 @@ filesystems_rw = ["/mnt/games"]  # extra host paths the container sees
 filesystems_ro = []
 ```
 
+A commented example for each runner is in
+[examples/profiles](examples/profiles); a test keeps them free of errors and
+warnings.
+
 What `prefix` and `runner_args` mean depends on the runner:
 
 | Runner                | `prefix`                                  | `runner_args`                       |

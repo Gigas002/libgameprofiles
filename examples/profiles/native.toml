@@ -1,0 +1,10 @@
+# profiles/native.toml: a Linux game run as is (lootrs, gaki).
+# No prefix: a native game uses your real home.
+
+name = "native"
+runner = "native"
+wrappers = ["gamemoderun"]
+shader_cache = "~/.cache/shaders"
+
+[env]
+SDL_VIDEODRIVER = "wayland"

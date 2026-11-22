@@ -1,0 +1,12 @@
+# profiles/slr.toml: a Linux game in a Steam Linux Runtime container (sruman).
+
+name = "slr"
+runner = "native"
+prefix = "~/prefixes/slr"               # the game's private home is <prefix>/home
+# runner_args = []                      # options of the runtime's entry point
+wrappers = ["mangohud"]                 # outside the container
+
+[slr]
+runtime = "sniper"                      # or "sniper=<build>" to pin a build
+filesystems_rw = ["~/Games"]            # extra host paths the container sees
+filesystems_ro = []
