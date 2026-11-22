@@ -1,0 +1,18 @@
+[package]
+name = "libgameprofiles"
+version = "0.1.0"
+edition = "2024"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/Gigas002/libgameprofiles"
+description = "Game profiles shared by lootrs, gaki and sruman: the profile file format, its validation, and loading and saving profile directories"
+keywords = ["games", "wine", "proton", "profiles", "steam"]
+categories = ["config", "games"]
+readme = "README.md"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"
+toml = "1"
+
+[dev-dependencies]
+tempfile = "3"
