@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.1.1]
+
+- Same code as 0.1.0, released again from the reworded git history.
+
 ## [0.1.0]
 
 - Initial release: the profile model, validation and store of lootrs
