@@ -63,7 +63,7 @@ build = "experimental"           # a Steam build name, or a Proton directory
 # steam = "auto" | "host" | "none": bridge to the host Steam client
 
 [slr]                            # runner = "slr"; required there
-runtime = "sniper"               # or "sniper=<build>" to pin a build
+runtime = "steamrt4"             # the latest; or "steamrt4=<build>" to pin a build
 mode = "container"               # container | overlay (see below)
 filesystems_rw = ["/mnt/games"]  # container: extra host paths it sees
 filesystems_ro = []
