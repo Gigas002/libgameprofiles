@@ -245,7 +245,7 @@ impl Anticheat {
 /// `[slr]`: which Steam Linux Runtime an `slr` profile uses, and how.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SlrSection {
-    /// A runtime name (`sniper`), or `name=build` to pin a build. Its syntax
+    /// A runtime name (`steamrt4`), or `name=build` to pin a build. Its syntax
     /// and the known runtimes are the runtime manager's (sruman) to check.
     pub runtime: String,
     /// Where the game's libraries come from.

@@ -9,7 +9,7 @@ prefix = "~/prefixes/slr"               # the game's private home is <prefix>/ho
 wrappers = ["mangohud"]                 # outside the container
 
 [slr]
-runtime = "sniper"                      # or "sniper=<build>" to pin a build
+runtime = "steamrt4"                    # the latest; or "steamrt4=<build>" to pin a build
 # mode = "container"                    # the default
 filesystems_rw = ["~/Games"]            # extra host paths the container sees
 filesystems_ro = []
