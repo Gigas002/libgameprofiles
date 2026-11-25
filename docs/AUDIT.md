@@ -1,9 +1,7 @@
 # Audit
 
-Audit of libgameprofiles 0.1.0 before its first release, done on 2026-11-22
-while it was extracted from lootrs (`liblootrs::model`, `liblootrs::store`)
-and merged with sruman's copy of the model (`libsruman::model`) and gaki's
-profile checks.
+Audit of libgameprofiles 0.1.0 before its first release, done on 2026-11-22,
+when the code was extracted from existing launchers into this library.
 
 ## Scope
 
@@ -64,9 +62,9 @@ Fixed before release:
 8. **Settings for another runner were silently ignored** (`[proton]`, `steam`
    or `[slr]` on a `wine` profile). They are kept, so switching runners loses
    nothing, and now produce a warning.
-9. **Unknown keys were silently dropped by lootrs and gaki** (sruman warned).
-   All three warn now, from one list (`KNOWN_KEYS`, tested against the schema
-   in `every_known_key_is_a_field`).
+9. **Unknown keys were silently dropped.** Loading warns about them now, from
+   one list (`KNOWN_KEYS`, tested against the schema in
+   `every_known_key_is_a_field`).
 
 Checked and fine:
 
@@ -89,7 +87,7 @@ Checked and fine:
   `lib_overrides` key must be a bare library file name (`*.so` or `*.so.*`, no
   `/`, space, `=` or NUL), so it can't name a path outside the runtime and
   host library folders; which libraries may be overridden at all (never the
-  C library) is sruman's to enforce. Settings a mode ignores warn and aren't
+  C library) is the runtime manager's to enforce. Settings a mode ignores warn and aren't
   checked, like those of another runner.
 
 ## API and semver notes
@@ -99,24 +97,12 @@ Checked and fine:
   is that a new field or variant is a breaking change: while the version is
   `0.x`, it means a minor bump (`0.1` → `0.2`).
 - `Issue<S>` and `Issues<S>` are generic over the subject, so each tool keeps
-  its own subjects (gaki's games have an app id) and converts the library's
+  its own subjects (a launcher's games may have an app id) and converts the library's
   with `Issue::map_subject` and `From`.
 - `runner` is required in every file. This keeps a file's meaning
   independent of the tool that reads it. `slr` is a runner of its own rather
   than `native` plus `[slr]`, so no runner changes meaning with an optional
   section, and each tool refuses the runners it can't launch.
-- The fit of the API was checked by porting all three consumers to it
-  (lootrs, gaki and sruman on their `feature/libgameprofiles` branches). Their
-  test suites pass in every feature set, and lootrs and gaki report
-  identically on real configuration directories before and after the port.
-
-## Behaviour changes for the tools
-
-Compared with the code each tool had before:
-
-- **All:** findings 6 to 9 above.
-- **lootrs:** `native` games get no DXVK/VKD3D shader cache variables (only
-  Mesa, NVIDIA and AMD); `slr` profiles are refused (sruman runs them).
-- **gaki:** `slr` profiles are refused.
-- **sruman:** profile files need `runner = "slr"`; a malformed
-  `slr.runtime` is a validation error instead of a load error.
+- The fit of the API was checked by porting existing launchers to it: their
+  test suites passed, and they reported identically on real configuration
+  directories before and after the port.

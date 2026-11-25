@@ -1,4 +1,4 @@
-# profiles/proton.toml: a Steam game through Steam's own Proton (gaki).
+# profiles/proton.toml: a Steam game through Steam's own Proton.
 
 name = "proton"
 runner = "proton"

@@ -1,4 +1,4 @@
-# profiles/umu.toml: a Windows game through Proton outside Steam (lootrs).
+# profiles/umu.toml: a Windows game through Proton outside Steam.
 # DXVK and VKD3D-Proton come with Proton, so there's no `dxvk`/`vkd3d` here.
 
 name = "umu"

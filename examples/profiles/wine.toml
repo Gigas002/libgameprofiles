@@ -1,4 +1,4 @@
-# profiles/wine.toml: a Windows game through Wine (lootrs).
+# profiles/wine.toml: a Windows game through Wine.
 # `name` must match the file name. Paths are absolute or start with `~`.
 
 name = "wine"

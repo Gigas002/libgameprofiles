@@ -1,5 +1,5 @@
 # profiles/slr-overlay.toml: a Linux game on the host, with a Steam Linux
-# Runtime's libraries where the host's are missing or older (sruman). No container: the game sees your
+# Runtime's libraries where the host's are missing or older. No container: the game sees your
 # real home and system. Your C library and graphics drivers always stay.
 
 name = "slr-overlay"

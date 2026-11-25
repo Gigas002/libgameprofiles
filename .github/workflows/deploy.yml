@@ -21,8 +21,8 @@ jobs:
         with:
           generate_release_notes: true
 
-  # lootrs, gaki and sruman publish against this crate's crates.io release, so
-  # it goes out before theirs.
+  # Crates that depend on this one publish against its crates.io release, so
+  # it goes out first.
   publish-crates-io:
     needs: github-release
     name: publish

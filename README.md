@@ -1,22 +1,20 @@
 # libgameprofiles
 
-Game profiles shared by [lootrs](https://github.com/Gigas002/lootrs),
-[gaki](https://github.com/Gigas002/gaki) and
-[sruman](https://github.com/Gigas002/sruman): the profile file format, its
-validation, and loading and saving profile directories.
+Game profiles for launchers: the profile file format, its validation, and
+loading and saving profile directories.
 
 A profile says how games run: which runner, in which prefix, with which
-environment and wrappers. Each tool reads the same `profiles/<name>.toml`
-files, so one profile directory can serve all three. Each tool keeps its own
-games list (`games.toml`).
+environment and wrappers. Any program that reads the same
+`profiles/<name>.toml` files can share one profile directory with any other.
+Which games use which profile is the program's own business.
 
-| Runner   | What it runs                                                         | Launched by |
-| -------- | -------------------------------------------------------------------- | ----------- |
-| `wine`   | A Windows executable through Wine                                    | lootrs      |
-| `umu`    | A Windows executable through Proton, outside Steam (`umu-run`)       | lootrs      |
-| `proton` | A Steam game through Steam's own Proton (`proton run`)               | gaki        |
-| `native` | A Linux executable as is                                             | lootrs, gaki |
-| `slr`    | A Linux executable with a Steam Linux Runtime                        | sruman      |
+| Runner   | What it runs                                                         |
+| -------- | -------------------------------------------------------------------- |
+| `wine`   | A Windows executable through Wine                                    |
+| `umu`    | A Windows executable through Proton, outside Steam (`umu-run`)       |
+| `proton` | A Steam game through Steam's own Proton (`proton run`)               |
+| `native` | A Linux executable as is                                             |
+| `slr`    | A Linux executable with a Steam Linux Runtime                        |
 
 ## Profile files
 
@@ -117,10 +115,9 @@ newer tool still loads everywhere.
   that are used are checked further), a `prefix` in `overlay` mode, and
   unknown keys (when loading).
 
-What a launch needs is each tool's to check: lootrs requires a `prefix` and
-`[umu].proton` and refuses `proton` and `slr`; gaki launches only `proton`
-and `native`; sruman launches only `slr` and checks the runtime is known and
-installed.
+What a launch needs beyond that is the launcher's to check: which runners it
+supports, whether the runner, Proton build or runtime is installed, and
+anything it requires that the format leaves optional (a `prefix`, say).
 
 ## Usage
 
@@ -135,7 +132,7 @@ use std::path::Path;
 use libgameprofiles::{Profile, Runner, store};
 
 let home = Path::new("/home/user");
-let dir = home.join(".config/lootrs/profiles");
+let dir = home.join(".config/my-launcher/profiles");
 
 let loaded = store::load_dir(&dir);
 for issue in loaded.issues() {
@@ -161,4 +158,4 @@ The library was audited before its first release; findings and checks are in
 
 ## License
 
-GPL-3.0-or-later, the same as lootrs and sruman.
+GPL-3.0-or-later.
