@@ -1,4 +1,4 @@
-# profiles/native.toml: a Linux game run as is (lootrs, gaki).
+# profiles/native.toml: a Linux game run as is.
 # No prefix: a native game uses your real home.
 
 name = "native"

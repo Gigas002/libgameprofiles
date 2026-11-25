@@ -14,7 +14,7 @@
 //! | `[proton]`, `steam`                           |        |       |    ✓     |          |       |
 //! | `[slr]` (required)                            |        |       |          |          |   ✓   |
 //!
-//! An `slr` profile runs Linux games with a Steam Linux Runtime (sruman).
+//! An `slr` profile runs Linux games with a Steam Linux Runtime.
 //! `prefix` gives the game a private home (`<prefix>/home`), and
 //! [`SlrSection::mode`] says where its libraries come from: the runtime's
 //! container, or the host with the runtime's libraries on top.
@@ -104,7 +104,7 @@ pub enum Runner {
     Proton,
     /// A Linux executable as is.
     Native,
-    /// A Linux executable with a Steam Linux Runtime (`[slr]`, sruman).
+    /// A Linux executable with a Steam Linux Runtime (`[slr]`).
     Slr,
 }
 
@@ -246,7 +246,7 @@ impl Anticheat {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SlrSection {
     /// A runtime name (`steamrt4`), or `name=build` to pin a build. Its syntax
-    /// and the known runtimes are the runtime manager's (sruman) to check.
+    /// and the known runtimes are the runtime manager's to check.
     pub runtime: String,
     /// Where the game's libraries come from.
     #[serde(default, skip_serializing_if = "SlrMode::is_default")]

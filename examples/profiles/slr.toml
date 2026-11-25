@@ -1,4 +1,4 @@
-# profiles/slr.toml: a Linux game in a Steam Linux Runtime container (sruman).
+# profiles/slr.toml: a Linux game in a Steam Linux Runtime container.
 # The game gets the runtime's libraries and a private home: a "prefix" for
 # native games, like a Wine prefix for Windows ones.
 

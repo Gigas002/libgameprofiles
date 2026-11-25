@@ -1,9 +1,9 @@
-//! Game profiles shared by [lootrs], [gaki] and [sruman].
+//! Game profiles for launchers.
 //!
 //! A profile is a `profiles/<name>.toml` file that says how games run: which
 //! runner (`wine`, `umu`, `proton`, `native` or `slr`), in which prefix, with which
-//! environment, wrappers and runner-specific settings. One schema serves all
-//! three tools, so one profile directory can be shared between them.
+//! environment, wrappers and runner-specific settings. Programs that read the
+//! same schema can share one profile directory.
 //!
 //! - [`profile`]: the schema ([`Profile`] and its sections) and its
 //!   validation, which every tool runs before its own launch checks.
@@ -36,10 +36,6 @@
 //! );
 //! # Ok::<(), toml::de::Error>(())
 //! ```
-//!
-//! [lootrs]: https://github.com/Gigas002/lootrs
-//! [gaki]: https://github.com/Gigas002/gaki
-//! [sruman]: https://github.com/Gigas002/sruman
 
 use std::path::{Path, PathBuf};
 
